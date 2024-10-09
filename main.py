@@ -1,26 +1,41 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
+from managers.server_manager import add_server, update_server, delete_server, get_all_servers
+from modules.ping_supervisor import *
+from modules.http_supervisor import *
+from modules.snmp_supervisor import *
 from sqlalchemy.orm import Session
 from database import get_db
-from managers.server_manager import add_server, update_server, delete_server, get_all_servers
-from modules.ping_supervisor import supervise_ping
-from modules.http_supervisor import supervise_http
-from modules.snmp_supervisor import supervise_snmp
 import models.server_model as models
 import asyncio
+from datetime import datetime
+from pydantic import BaseModel
+
 
 # Créer une instance de FastAPI
 app = FastAPI()
 
+class ServerCreate(BaseModel):
+    name: str
+    ip_address: str
+    service_type: str
+
 # Créer les tables à partir des modèles
 @app.on_event("startup")
 def startup_event():
-    models.Base.metadata.create_all(bind=get_db().bind)
+    db = next(get_db())  # Obtenir une session DB active depuis le générateur
+    try:
+        models.Base.metadata.create_all(bind=db.bind)
+    finally:
+        db.close() 
 
 # Route pour ajouter un serveur
 @app.post("/add_server")
-def create_server(name: str, ip_address: str, service_type: str, db: Session = Depends(get_db)):
+def create_server(server: ServerCreate, db: Session = Depends(get_db)):
     try:
-        return add_server(name, ip_address, service_type, db)
+        # Utiliser les données du modèle pour créer un serveur
+        return add_server(server.name, server.ip_address, server.service_type, db)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

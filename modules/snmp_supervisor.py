@@ -7,13 +7,18 @@ from datetime import datetime
 # Fonction de supervision SNMP
 def supervise_snmp(server: Server, db: Session):
     try:
-        iterator = getCmd(SnmpEngine(),
-                         CommunityData('public', mpModel=0),
-                         UdpTransportTarget((server.ip_address, 161)),
-                         ContextData(),
-                         ObjectType(ObjectIdentity('1.3.6.1.2.1.1.1.0')))
+        # Effectuer une requête SNMP GET pour l'objet spécifié
+        iterator = getCmd(
+            SnmpEngine(),
+            CommunityData('public', mpModel=0),
+            UdpTransportTarget((server.ip_address, 161)),
+            ContextData(),
+            ObjectType(ObjectIdentity('1.3.6.1.2.1.1.1.0'))
+        )
+
         errorIndication, errorStatus, errorIndex, varBinds = next(iterator)
 
+        # Vérifier les erreurs
         if errorIndication:
             status = "Down"
             response_data = str(errorIndication)
@@ -23,11 +28,13 @@ def supervise_snmp(server: Server, db: Session):
         else:
             status = "Up"
             response_data = ', '.join([f"{name.prettyPrint()} = {val.prettyPrint()}" for name, val in varBinds])
+
     except Exception as e:
+        # Gestion des exceptions Python
         status = "Down"
         response_data = str(e)
 
-    # Enregistrer le résultat de la supervision
+    # Enregistrer le résultat de la supervision dans la base de données
     supervision_result = SupervisionResult(
         server_id=server.id,
         status=status,
