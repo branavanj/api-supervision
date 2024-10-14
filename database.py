@@ -3,6 +3,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 import os
+from contextlib import contextmanager
+
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -17,7 +19,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Base pour les modèles SQLAlchemy
 Base = declarative_base()
 
-# Fonction pour obtenir la session de la base de données
+@contextmanager
 def get_db():
     db = SessionLocal()
     try:
